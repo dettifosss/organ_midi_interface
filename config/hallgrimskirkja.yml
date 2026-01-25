@@ -1,0 +1,25 @@
+defaults:
+  name: Hallgrímskirkja
+  note_range:
+    low: 36
+    high: 93
+  max_activations: 5
+
+registers:
+  - name: Bombardwerk
+    midi: { channel: 5 }
+
+  - name: Schwellwerk
+    midi: { channel: 4 }
+
+  - name: Hauptwerk
+    midi: { channel: 3 }
+
+  - name: Rückpositiv
+    midi: { channel: 2 }
+
+  - name: Pedal
+    midi: { channel: 1 }
+    note_range:
+      high: 67
+

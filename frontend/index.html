@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Vertical Slider Client</title>
+
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #111;
+        color: #eee;
+        font-family: system-ui, sans-serif;
+        overscroll-behavior: none;
+        touch-action: none;
+    }
+
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #container {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Slider wrapper */
+    #slider-wrapper {
+        height: 75vh;
+        width: 80vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Rotate horizontal range into vertical */
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 75vh;
+        height: 6px;
+        background: #333;
+        border-radius: 3px;
+
+        transform: rotate(-90deg);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    input[type="range"] {
+    transition: all 0.25s ease-out; /* smooth thumb movement */
+    }
+</style>
+</head>
+
+<body>
+
+<div id="container">
+    <div id="slider-wrapper">
+        <input
+            id="slider"
+            type="range"
+            min="0"
+            max="99"
+            value="50"
+            step="1"
+        />
+    </div>
+</div>
+
+<script>
+    /* ---------- ClientID  ---------- */
+    function getClientId() {
+        let id = localStorage.getItem("client_id");
+        if (!id) {
+            const timestamp = Date.now().toString(36);       // base36 timestamp
+            const randomPart = Math.floor(Math.random()*1e8).toString(36); // random base36
+            id = `${timestamp}-${randomPart}`;
+            localStorage.setItem("client_id", id);
+        }
+        return id;
+    }
+
+    /* ---------- WebSocket ---------- */
+
+    let ws;
+    const RECONNECT_DELAY = 1000; // 1 second
+
+    connectWebSocket();
+
+    function connectWebSocket() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+            console.log("WebSocket already open or connecting, skipping...");
+            return; // prevent multiple connections
+        }
+
+        // This will be interesting going forward!!!!
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsHost = window.location.hostname + ":8000";
+        ws = new WebSocket(`${wsProtocol}//${wsHost}/ws`);
+
+        ws.onopen = () => {
+            console.log("✅ WebSocket connected");
+            ws.send(JSON.stringify({type: "hello", client_id: getClientId()}));
+        };
+
+        ws.onerror = (e) => {
+            console.error("WebSocket error", e);
+            setTimeout(connectWebSocket, RECONNECT_DELAY);
+        };
+        
+        ws.onclose = () => {
+            console.log("WebSocket closed");
+            setTimeout(connectWebSocket, RECONNECT_DELAY);
+        };
+
+        ws.onmessage = (event) => {
+            console.log("RAW MESSAGE: ", event.data);
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === "config" && msg.slider) {
+                slider.max = msg.slider.max;
+                slider.value = msg.slider.value;
+                console.log("Slider configured:", msg);
+            }
+        };
+    };
+
+    /* ---------- Slider ---------- */
+
+    const slider = document.getElementById("slider");
+
+    slider.addEventListener("pointerdown", () => {
+        sliderTouched = true;
+        ensureConnection();
+        sendSliderUpdate();
+    });
+
+    slider.addEventListener("pointerup", () => {
+        sliderTouched = false;
+        sendSliderUpdate();
+    });
+
+    slider.addEventListener("input", () => {
+        sendSliderUpdate();
+    });
+
+    function ensureConnection() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            connectWebSocket();
+        }
+    }
+
+    function sendSliderUpdate() {
+        const value = Number(slider.value);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+                JSON.stringify({
+                    type: "slider",
+                    value: value,
+                    touching: sliderTouched
+                })
+            );
+        }
+    }
+
+</script>
+
+</body>
+</html>
