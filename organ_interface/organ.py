@@ -95,7 +95,7 @@ class NoteState:
 
     def process_cancelled_event(self, event: NoteEvent) -> None:
         logger.debug(f"Queued count updated for {self}:  {self._queued_count} -> {self._queued_count - event.action.delta}")
-        self._queued_count = clamp_int(self._queued_count - event.action.delta)
+        self._queued_count = clamp_int(self._queued_count - event.action.delta, 0, self._max_count)
 
     def __repr__(self) -> str:
         return f"<NoteState {self._note.name.pretty:3} on '{self._register.name}': q_count = {self._queued_count}/{self._max_count}, count = {self._actual_count}/{self._max_count}>"

@@ -230,7 +230,7 @@ class VoiceController:
 	def queue(self) -> Queue:
 		return self._vm.queue
 
-	def assign_random_ranges_old(self,
+	def assign_random_ranges(self,
 			include_notes: list[str]|None = None,
 			keep_current: bool=True,
 			reset: bool=True

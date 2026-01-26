@@ -3,19 +3,23 @@ from queue import Queue, Empty
 from mido import open_output, get_output_names,Message as MidiMessage
 from mido.ports import BaseOutput
 from threading import Thread
+from time import monotonic_ns, sleep
 
 from .organ import NoteEvent
+
 
 class MidiOutput:
     STOP_EVENT: object = object()
 
-    def __init__(self, port_name: str, queue_size: int=256) -> None:
+    def __init__(self, port_name: str, queue_size: int=1024, min_gap_ns: int=2_000_000) -> None:
         self._port_name: str = port_name
         self._stop_event: type(MidiOutput.STOP_EVENT) = MidiOutput.STOP_EVENT
         self._queue: Queue[object] = Queue(maxsize=queue_size)
         #self._active_note_events: list[NoteEvent] = []
         self._thread: Thread|None = None
-        
+        self._min_gap_ns = min_gap_ns
+
+
     @property
     def queue(self) -> Queue[object]:
         return self._queue
@@ -51,6 +55,13 @@ class MidiOutput:
     def midi_listener(self) -> None:
         with open_output(self._port_name) as port:
             try:
+                
+                ns_per_s: int= 1_000_000_000
+                min_gap_ns: int = self._min_gap_ns
+                last_send_ts: int = 0
+                now: int = monotonic_ns()
+                delta: int = 0
+
                 while True:
                     try:
                         msg: NoteEvent|type(MidiOutput.STOP_EVENT) = self._queue.get(timeout=0.5)
@@ -62,9 +73,17 @@ class MidiOutput:
                         break
                     if msg.midi_message is None:
                         logger.debug(f"DROPPED {msg}")
+                        msg.midi_complete()
                         continue
                     #logger.debug(f"SENDING <{msg.midi_message}> to {port}")
+                    
+                    now = monotonic_ns()
+                    delta = now - last_send_ts
+                    sleep(max(0, (min_gap_ns - delta) / ns_per_s))
+                    
                     port.send(msg.midi_message)
+                    
+                    last_send_ts = monotonic_ns()
 
                     msg.midi_complete()
 

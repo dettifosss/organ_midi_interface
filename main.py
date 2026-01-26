@@ -15,6 +15,8 @@ from organ_interface.midi_workers import MidiOutput
 ORGAN_CONFIG_FILE: str = "hallgrimskirkja.yml"
 OUTPUT_PORT: str = "loopMIDI Port 2"
 
+MIN_GAP_NS: int = 0#_000_000
+
 def test_voices(vm):
     logger.info(vm)
     for vc in vm.voice_controllers:
@@ -61,15 +63,17 @@ def main() -> None:
     for r in organ:
         logger.info(r)
 
-    midi_output: MidiOutput = MidiOutput(OUTPUT_PORT)
+    midi_output: MidiOutput = MidiOutput(OUTPUT_PORT, min_gap_ns=MIN_GAP_NS)
     midi_output.start_midi_output_thread()
 
     vm = VoiceManager(organ, midi_output.queue)
     #vm.create_random_voices(1, voice_cls = WebVoice)
-    #vm.create_random_voices(1, voice_cls = RatioVoice)
-    #vm.assign_random_ranges(["C", "E", "G"], keep_current = False)
+    vm.create_random_voices(54, voice_cls = RatioVoice)
+    vm.assign_random_ranges(["C", "E", "G"], keep_current = False)
 
-    #test_voices(vm)
+    test_voices(vm)
+    midi_output.stop_midi_output_thread()
+    return
 
     from webserver import app
     app.state.voice_manager = vm
