@@ -1,24 +1,29 @@
 from loguru import logger
 from queue import Queue, Empty
-from mido import open_output, get_output_names,Message as MidiMessage
+from mido import open_output, get_output_names, Message as MidiMessage
 from mido.ports import BaseOutput
 from threading import Thread
 from time import monotonic_ns, sleep
 
 from .organ import NoteEvent
 
-
 class MidiOutput:
     STOP_EVENT: object = object()
 
-    def __init__(self, port_name: str, queue_size: int=1024, min_gap_ns: int=2_000_000) -> None:
-        self._port_name: str = port_name
+    def __init__(self, config: dict[str, any]) -> None:
+        self._config: dict[str, any] = config
+        self._port_name: str
+        self._magic_assign_midi_port()
         self._stop_event: type(MidiOutput.STOP_EVENT) = MidiOutput.STOP_EVENT
-        self._queue: Queue[object] = Queue(maxsize=queue_size)
-        #self._active_note_events: list[NoteEvent] = []
+        self._queue: Queue[object] = Queue(maxsize=config.get("queue_size"))
+        self._min_gap_ns = config.get('min_gap_ns')
         self._thread: Thread|None = None
-        self._min_gap_ns = min_gap_ns
 
+    def _magic_assign_midi_port(self) -> None:
+        for port_str in get_output_names():
+            if any(name in port_str for name in self._config.get("midi_interface_names", [])):
+                self._port_name = port_str
+                return
 
     @property
     def queue(self) -> Queue[object]:

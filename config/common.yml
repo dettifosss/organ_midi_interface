@@ -1,0 +1,9 @@
+organ_config_file: organ/hallgrimskirkja.yml
+
+midi_config:
+  midi_interface_names:
+    - loopMIDI
+    - EXI
+  min_gap_ns: 1_000_000
+  queue_size: 1024
+

@@ -3,8 +3,6 @@ from loguru import logger
 from mido import Message as MidiMessage
 import random
 
-from yaml import safe_load as safe_load_yaml
-from pathlib import Path
 from typing import Optional, Iterator
 
 from functools import total_ordering
@@ -136,6 +134,8 @@ class Note:
     def __eq__(self, other: "Note"):
         return self.name == other.name
 
+
+
 class Register:
     def __init__(
         self,
@@ -193,10 +193,10 @@ class Register:
         return len(self._notes)
 
 class Organ:
-    def __init__(self, config_file: Path):
-        config = self.load_organ_config(config_file) # WARN: Type missing
+    def __init__(self, config: dict[str, any]):
+        self._config: dict[str,any] = config
         self._name: str = config.get("defaults", {}).get("name", "Generic")
-        self._registers: dict[str, Register] = self.load_registers(config)
+        self._registers: dict[str, Register] = self.load_registers()
 
     @property
     def name(self) -> str:
@@ -206,20 +206,15 @@ class Organ:
     def registers(self) -> list[Register]:
         return list(self._registers.values())
 
-    def load_organ_config(self, config_path: Path) -> dict[str, any]:
-        with config_path.open("r", encoding="utf-8") as f:
-            config = safe_load_yaml(f)
-        return config
-
-    def load_registers(self, config) -> dict[str, Register]:
-        defaults: dict = config.get("defaults", {})
+    def load_registers(self) -> dict[str, Register]:
+        defaults: dict = self._config.get("defaults", {})
         d_low: int = defaults["note_range"]["low"]
         d_high: int = defaults["note_range"]["high"]
         d_max: int = defaults["max_activations"]
 
         registers: dict[str, Register] = {}
 
-        for reg_cfg in config.get("registers", []):
+        for reg_cfg in self._config.get("registers", []):
             name: str = reg_cfg["name"]
             midi_channel: int = reg_cfg["midi"]["channel"]
             assert midi_channel in range(1, 17), f"Midi Channel, {midi_channel} is out of bounds [1,16]."
