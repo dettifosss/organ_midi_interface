@@ -69,6 +69,9 @@ def test_song(
     vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
     vm.load_front_scene(start_scene)
     
+    for v in vm:
+        logger.info(v)
+
     vm.all_on()
     vm.set_all_voice_ratios(0.0)
     vm.queue_all_midi()
@@ -94,10 +97,10 @@ def test_song(
 
         vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
 
-        logger.info("Heading into final scene.")
+    logger.info("Heading into final scene.")
 
     vm.load_scene(end_scene)
-    vc.cycle_notes(loop_time=loop_speed*10, steps=1000, timing=True)
+    vc.cycle_notes(loop_time=loop_speed*5, steps=1000, timing=True)
 
     for r in organ:
         for s in r.stops:
@@ -106,7 +109,7 @@ def test_song(
             q.put(se)
             time.sleep(0.1)
 
-    time.sleep(sleep_time*2)
+    time.sleep(sleep_time*5)
 
     vm.all_off()
 
@@ -152,7 +155,7 @@ def main() -> None:
     VOICE_COUNT: int = 54
     LOOP_SPEED: float = 0.01
     LOOP_COUNT: int = 4
-    SLEEP_TIME: int = 1
+    SLEEP_TIME: int = 2
     DEBUG_ON: bool = False
     TEST_STOPS: bool = False
     PLAY_SONG: bool = True
