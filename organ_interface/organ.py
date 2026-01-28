@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from loguru import logger
 from mido import Message as MidiMessage
 import random
+import time
 
 from typing import Optional, Iterator
 
@@ -10,9 +11,12 @@ from time import monotonic
 
 from .note_attributes import NoteName, NoteAction, get_note_name, note_name_range
 from .helpers import clamp_int, clamp_float
+#from .stops import Stop
 
 MAX_ACTIVATIONS: int = 5
 CHANNEL_OFFSET: int = 1
+
+
 
 @dataclass
 class NoteEvent:
@@ -61,13 +65,16 @@ class NoteEvent:
     def __repr__(self) -> str:
         return f"<NoteEvent: {self.action} for {self.name.pretty} on '{self.register.name}' over channel {self.channel}>"
 
+
 class NoteState:
     def __init__(self, note: "Note", max_count: int=MAX_ACTIVATIONS) -> None:
         self._note: "Note" = note
+        self._name: NoteName = note.name
         self._register: "Register" = note.register
         self._max_count: int = max_count
         self._actual_count: int = 0
         self._queued_count: int = 0
+        self._last_action_ts: int = int(time.time() * 1000)
 
     @property
     def active(self) -> bool:
@@ -78,7 +85,7 @@ class NoteState:
         return self._queued_count > 0 
 
     def process_action(self, action: NoteAction) -> NoteAction:
-        logger.debug(f"Processing {action} for {self._note.name} on {self._register.name}, q_count={self._queued_count}, a_count={self._actual_count}")
+        logger.debug(f"Processing {action} for {self._name} on {self._register.name}, q_count={self._queued_count}, a_count={self._actual_count}")
         was_active: bool = self.queue_active
         self._queued_count = clamp_int(self._queued_count + action.delta, 0, self._max_count)
         if was_active != self.queue_active:
@@ -96,7 +103,63 @@ class NoteState:
         self._queued_count = clamp_int(self._queued_count - event.action.delta, 0, self._max_count)
 
     def __repr__(self) -> str:
-        return f"<NoteState {self._note.name.pretty:3} on '{self._register.name}': q_count = {self._queued_count}/{self._max_count}, count = {self._actual_count}/{self._max_count}>"
+        return f"<NoteState {self._name.pretty:3} on '{self._register.name}': q_count = {self._queued_count}/{self._max_count}, count = {self._actual_count}/{self._max_count}>"
+
+
+class StopState(NoteState):
+    def __init__(self, stop: "Stop") -> None:
+        self._stop: "Stop" = stop
+        self._name = stop.name
+        self._register: "Register" = None
+        self._max_count: int = 1
+        self._actual_count: int = 0
+        self._queued_count: int = 0
+        self._last_action_ts: int = int(time.time() * 1000)
+
+    def assign_register(self, register: "Register") -> None:
+        self._register = register
+
+    def __repr__(self) -> str:
+        return f"<StopState {self._name} on '{self._register.name}': last_action_ts = {self._last_action_ts}, active={self.active}"
+
+HALLGRIMSKIRKJA_STOP_CHANNEL: int = 14
+
+@dataclass
+class HallgrimskirkjaStopEvent(NoteEvent):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.channel = HALLGRIMSKIRKJA_STOP_CHANNEL
+        self._create_midi_message()
+
+    def __repr__(self) -> str:
+        return f"<HallgrimskirkjaStopEvent: {self.action} for midi_note {self.name.value} on '{self.register.name}' over channel {self.channel}>"
+
+
+StopEvent = HallgrimskirkjaStopEvent
+
+@dataclass
+class Stop:
+    name: NoteName
+    #register: "Register"
+    stop_name: str
+    #number: int
+    size: int|None
+    duplicates: bool
+    state: StopState = field(init=False)
+    register: "Register" = None
+
+    def __post_init__(self):
+        self.state = StopState(self)
+
+    def assign_register(self, register: "Register") -> None:
+        self.register = register
+        self.state.assign_register(register)
+
+    def get_stop_event(self, action: NoteAction) -> StopEvent:
+        return StopEvent(self, self.state.process_action(action))
+
+    def __repr__(self) -> str:
+        return f"<Stop {self.stop_name} on {self.register.name}: {self.state.active=}>"
 
 @total_ordering
 class Note:
@@ -134,19 +197,21 @@ class Note:
     def __eq__(self, other: "Note"):
         return self.name == other.name
 
-
-
 class Register:
     def __init__(
         self,
         name: str,
         channel: int,
+        stops: dict[str, Stop],
         low_note_name: NoteName=NoteName.N36,
         high_note_name: NoteName=NoteName.N93
     ) -> None:
         self._name: str = name
         self._channel: int = channel
         self._notes: dict[NoteName, Note] = {nn: Note(nn, self) for nn in note_name_range(low_note_name, high_note_name)}
+        self._stops: dict[str, Stop] = stops
+        for stop in self._stops.values():
+            stop.assign_register(self)
 
     @property
     def name(self) -> str:
@@ -159,6 +224,10 @@ class Register:
     @property
     def notes(self) -> list[Note]:
         return list(self._notes.values())
+    
+    @property
+    def stops(self) -> list[Stop]:
+        return list(self._stops.values())
 
     @property
     def note_names(self) -> list[NoteName]:
@@ -222,14 +291,23 @@ class Organ:
             low_note_num: int = reg_cfg.get("note_range", {}).get("low", d_low)
             high_note_num: int = reg_cfg.get("note_range", {}).get("high", d_high)
             assert low_note_num < high_note_num, f"{low_note_num=} must be lower than {high_note_num}"
+            stops: dict[str, Stop] = self.load_stops(reg_cfg["stops"])
             _register: Register = Register(
                     name,
                     midi_channel,
+                    stops,
                     low_note_name=get_note_name(low_note_num),
                     high_note_name=get_note_name(high_note_num)
                  )
             registers[name] = _register
         return registers
+
+    def load_stops(self, stop_config: dict[str, any]) -> dict[str, Stop]:
+        stops: dict[str, any] = {}
+        for note_name_code, stop_info in stop_config.items():
+            s: Stop = Stop(NoteName[note_name_code], **stop_info)
+            stops[stop_info["stop_name"]] = s
+        return stops
 
     def __iter__(self) -> Iterator[Register]:
         return iter(self._registers.values())

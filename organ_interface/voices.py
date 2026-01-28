@@ -4,6 +4,7 @@ import random
 import time
 
 from .organ import Organ, Register, Note, NoteEvent
+from scenes.scenes import Scene
 from .note_attributes import NoteName, NoteAction, get_note_name, note_name_range, get_note_subset
 from .helpers import clamp_float
 from queue import Queue, Full
@@ -238,33 +239,6 @@ class VoiceController:
 		for v in self:
 			v.assign_random_range(include_notes, keep_current, reset)
 
-	# def assign_random_ranges_old(self,
-	# 		include_notes: list[str]|None = None,
-	# 		keep_current: bool=True,
-	# 		reset: bool=True
-	# 		) -> None:
-
-	# 	# NB: Not sure if this is my intention.
-	# 	if include_notes is None:
-	# 		include_notes = ["C", "E", "G"]
-
-	# 	for v in self:
-	# 		current_note: NoteName = v.active_note
-	# 		endpoints: list[NoteName] = []
-	# 		subset_notes: list[NoteName] = get_note_subset(v.allowed_notes, include_notes)
-			
-	# 		if keep_current:
-	# 			try:
-	# 				subset_notes.remove(current_note)
-	# 			except ValueError:
-	# 				pass
-	# 			endpoints.append(current_note)
-	# 			endpoints.append(random.choice(subset_notes))
-	# 		else:
-	# 			endpoints = random.sample(subset_notes, 2)
-	# 		v.create_note_list(*endpoints, reset=reset)
-
-
 	def queue_all_midi(self) -> None:
 		for v in self:
 			try:
@@ -400,6 +374,14 @@ class VoiceManager:
 
 	def get_voices_by_class(self, voice_cls: type[Voice]) -> Iterator[type[Voice]]:
 		return filter(lambda v: isinstance(v, voice_cls), self)
+
+	def load_scene(self, scene: Scene) -> None:
+		for v in self:
+			v.create_note_list(v[0], scene.get_note(v.register), reset=True)
+
+	def load_front_scene(self, scene: Scene) -> None:
+		for v in self:
+			v.create_note_list(scene.get_note(v.register), v[-1], reset=True)
 
 	def __getattr__(self, name):
 		def dispatcher(*args, **kwargs):

@@ -72,7 +72,8 @@ class MidiOutput:
                         msg: NoteEvent|type(MidiOutput.STOP_EVENT) = self._queue.get(timeout=0.5)
                     except Empty:
                         continue
-                    #logger.debug(f"Message received: {msg}")
+                    logger.debug(f"Message received: {msg}")
+                    
                     if msg is self._stop_event:
                         logger.info("STOP event received.")
                         break

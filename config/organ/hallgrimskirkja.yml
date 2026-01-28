@@ -8,18 +8,370 @@ defaults:
 registers:
   - name: Bombardwerk
     midi: { channel: 5 }
+    stops:
+      N0:
+        stop_name: "Rohrflöte"
+        size: 8
+        duplicates: false
+      N1:
+        stop_name: "Praestant"
+        size: 4
+        duplicates: false
+      N2:
+        stop_name: "Cornet 3f"
+        size: null
+        duplicates: false
+      N3:
+        stop_name: "Chamade"
+        size: 16
+        duplicates: false
+      N4:
+        stop_name: "Chamade"
+        size: 8
+        duplicates: false
+      N5:
+        stop_name: "Chamade"
+        size: 4
+        duplicates: false
+      N6:
+        stop_name: "Orlos"
+        size: 8
+        duplicates: false
+      N7:
+        stop_name: "Tremulant"
+        size: null
+        duplicates: false
+      N8:
+        stop_name: "Super III an II"
+        size: null
+        duplicates: true
+      N9:
+        stop_name: "Sub III an II"
+        size: null
+        duplicates: true
 
   - name: Schwellwerk
     midi: { channel: 4 }
+    stops:
+      N10:
+        stop_name: "Salicet"
+        size: 8
+        duplicates: false
+      N11:
+        stop_name: "Geigenprincipal"
+        size: 8
+        duplicates: false
+      N12:
+        stop_name: "Flute harm."
+        size: 8
+        duplicates: false
+      N13:
+        stop_name: "Bourdon"
+        size: 8
+        duplicates: false
+      N14:
+        stop_name: "Gamba"
+        size: 8
+        duplicates: false
+      N15:
+        stop_name: "Vox coelestis"
+        size: 8
+        duplicates: false
+      N16:
+        stop_name: "Octave"
+        size: 4
+        duplicates: false
+      N17:
+        stop_name: "Flute octav."
+        size: 4
+        duplicates: false
+      N18:
+        stop_name: "Salicional"
+        size: 4
+        duplicates: false
+      N19:
+        stop_name: "Octavin"
+        size: 2
+        duplicates: false
+      N20:
+        stop_name: "Piccolo"
+        size: 1
+        duplicates: false
+      N21:
+        stop_name: "Nasard"
+        size: 2
+        duplicates: false
+      N22:
+        stop_name: "Terz"
+        size: 1
+        duplicates: false
+      N23:
+        stop_name: "Fourniture 6f"
+        size: null
+        duplicates: false
+      N24:
+        stop_name: "Basson"
+        size: 16
+        duplicates: false
+      N25:
+        stop_name: "Trom. Harm."
+        size: 8
+        duplicates: false
+      N26:
+        stop_name: "Hautbois"
+        size: 8
+        duplicates: false
+      N27:
+        stop_name: "Vox humana"
+        size: 8
+        duplicates: false
+      N28:
+        stop_name: "Clairon harm."
+        size: 4
+        duplicates: false
+      N29:
+        stop_name: "Tremulant"
+        size: null
+        duplicates: false
+      N30:
+        stop_name: "IV an III"
+        size: null
+        duplicates: true
 
   - name: Hauptwerk
     midi: { channel: 3 }
+    stops:
+      N31:
+        stop_name: "Praestant"
+        size: 16
+        duplicates: false
+      N32:
+        stop_name: "Bourdon"
+        size: 16
+        duplicates: false
+      N33:
+        stop_name: "Principal"
+        size: 8
+        duplicates: false
+      N34:
+        stop_name: "Doppelflöte"
+        size: 8
+        duplicates: false
+      N35:
+        stop_name: "Gemshorn"
+        size: 8
+        duplicates: false
+      N36:
+        stop_name: "Octave"
+        size: 4
+        duplicates: false
+      N37:
+        stop_name: "Nachthorn"
+        size: 4
+        duplicates: false
+      N38:
+        stop_name: "Superoctave"
+        size: 2
+        duplicates: false
+      N39:
+        stop_name: "Quinte"
+        size: null
+        duplicates: false
+      N40:
+        stop_name: "Terz"
+        size: null
+        duplicates: false
+      N41:
+        stop_name: "Quinte"
+        size: null
+        duplicates: false
+      N42:
+        stop_name: "Cornet 5f"
+        size: null
+        duplicates: false
+      N43:
+        stop_name: "Mixtur 5f"
+        size: null
+        duplicates: false
+      N44:
+        stop_name: "Acuta 4f"
+        size: null
+        duplicates: false
+      N45:
+        stop_name: "Trompete"
+        size: 16
+        duplicates: false
+      N46:
+        stop_name: "Trompete"
+        size: 8
+        duplicates: false
+      N47:
+        stop_name: "Trompete"
+        size: 4
+        duplicates: false
+      N48:
+        stop_name: "I an II"
+        size: null
+        duplicates: true
+      N49:
+        stop_name: "III an II"
+        size: null
+        duplicates: true
+      N50:
+        stop_name: "IV an II"
+        size: null
+        duplicates: true
 
   - name: Rückpositiv
     midi: { channel: 2 }
+    stops:
+      N51:
+        stop_name: "Praestant"
+        size: 8
+        duplicates: false
+      N52:
+        stop_name: "Gedackt"
+        size: 8
+        duplicates: false
+      N53:
+        stop_name: "Quintade"
+        size: 8
+        duplicates: false
+      N54:
+        stop_name: "Principal"
+        size: 4
+        duplicates: false
+      N55:
+        stop_name: "Rohrflöte"
+        size: 4
+        duplicates: false
+      N56:
+        stop_name: "Octave"
+        size: 2
+        duplicates: false
+      N57:
+        stop_name: "Waldflöte"
+        size: 2
+        duplicates: false
+      N58:
+        stop_name: "Larigot"
+        size: null
+        duplicates: false
+      N59:
+        stop_name: "Sesquialter 2f"
+        size: null
+        duplicates: false
+      N60:
+        stop_name: "Scharff 5f"
+        size: null
+        duplicates: false
+      N61:
+        stop_name: "Cymbel 4f"
+        size: null
+        duplicates: false
+      N62:
+        stop_name: "Dulcian"
+        size: 16
+        duplicates: false
+      N63:
+        stop_name: "Trompete"
+        size: 8
+        duplicates: false
+      N64:
+        stop_name: "Cromorne"
+        size: 8
+        duplicates: false
+      N65:
+        stop_name: "Tremulant"
+        size: null
+        duplicates: false
+      N66:
+        stop_name: "III an I"
+        size: null
+        duplicates: true
 
   - name: Pedal
     midi: { channel: 1 }
     note_range:
       high: 67
-
+    stops:
+      N67:
+        stop_name: "Praestant"
+        size: 32
+        duplicates: false
+      N68:
+        stop_name: "Principal"
+        size: 16
+        duplicates: false
+      N69:
+        stop_name: "Oktave"
+        size: 8
+        duplicates: false
+      N70:
+        stop_name: "Superoctave"
+        size: 4
+        duplicates: false
+      N71:
+        stop_name: "Hintersatz 5fach"
+        size: null
+        duplicates: false
+      N72:
+        stop_name: "Bombarde"
+        size: 32
+        duplicates: false
+      N73:
+        stop_name: "Bombarde"
+        size: 16
+        duplicates: false
+      N74:
+        stop_name: "Fagott"
+        size: 16
+        duplicates: false
+      N75:
+        stop_name: "Posaune"
+        size: 8
+        duplicates: false
+      N76:
+        stop_name: "Schalmey"
+        size: 4
+        duplicates: false
+      N77:
+        stop_name: "Subbass"
+        size: 16
+        duplicates: false
+      N78:
+        stop_name: "Violon"
+        size: 16
+        duplicates: false
+      N79:
+        stop_name: "Cello"
+        size: 8
+        duplicates: false
+      N80:
+        stop_name: "Spielflöte"
+        size: 8
+        duplicates: false
+      N81:
+        stop_name: "Jubalflöte"
+        size: 2
+        duplicates: false
+      N82:
+        stop_name: "I"
+        size: null
+        duplicates: true
+      N83:
+        stop_name: "II"
+        size: null
+        duplicates: true
+      N84:
+        stop_name: "III"
+        size: null
+        duplicates: true
+      N85:
+        stop_name: "IV"
+        size: null
+        duplicates: true
+      N86:
+        stop_name: "Tremulant"
+        size: null
+        duplicates: false

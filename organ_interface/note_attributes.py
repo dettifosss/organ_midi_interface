@@ -3,8 +3,6 @@ from enum import Enum
 
 from typing import Iterator
 
-MIN_MIDI_NOTE: int = 36
-MAX_MIDI_NOTE: int = 93
 
 class NoteAction(Enum):
     PRESS = ("note_on", 1)
@@ -20,6 +18,11 @@ class NoteAction(Enum):
 ############################
 
 _NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+#MIN_MIDI_NOTE: int = 36
+#MAX_MIDI_NOTE: int = 93
+MIN_MIDI_NOTE: int = 0
+MAX_MIDI_NOTE: int = 127
 
 def midi_note_name(number: int) -> str:
     if number == -1:
@@ -60,9 +63,12 @@ def note_name_rangeUP(start: NoteName, end: NoteName) -> Iterator[NoteName]:
 
 def note_name_range(start: NoteName, end: NoteName) -> Iterator[NoteName]:
     if start == end:
-        logger.warning("Notes were the same, yielding a full Pedal range.")
-        start = NoteName.N36
-        end = NoteName.N67
+        logger.warning("Start and end notes are the same.")
+        yield get_note_name(start.value)
+
+        #logger.warning("Notes were the same, yielding a full Pedal range.")
+        #start = NoteName.N36
+        #end = NoteName.N67
 
     step: int
     if end < start:

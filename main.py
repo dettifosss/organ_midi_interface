@@ -12,8 +12,7 @@ import time
 from queue import Queue
 
 from organ_interface.midi_workers import MidiOutput
-import mido
-
+from scenes.scenes import get_all_notes, Scene, FavourLowScene, FavourHighScene
 
 
 def test_voices(vm, queue):
@@ -32,26 +31,17 @@ def test_voices(vm, queue):
     time.sleep(1)
 
     for k in range(1):
-        logger.info("RASS 1")
-        rvc.cycle_notes(loop_time=0.005, steps=100, timing=True)
-        logger.info("RASS 2")
+        rvc.cycle_notes(loop_time=0.005, steps=1000, timing=True)
         #wvc.cycle_notes()
-        logger.info("RASS 3")
         time.sleep(2)
         while not queue.empty():
             time.sleep(0.5)
-        logger.info("RASS 4")
         try:
-            logger.info("RASS 5")
             vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
-            logger.info("RASS 6")
         except ValueError as e:
-            logger.info("RASS 7")
             logger.error(e)
             for v in vm: 
-                logger.info("RASS 8")
                 print(v)
-        logger.info("RASS 9")
         
 
     logger.debug("Gonna turn off")
@@ -60,12 +50,117 @@ def test_voices(vm, queue):
     logger.debug("Should be quiet!")
 
 
+def test_song(
+        organ: Organ,
+        vm: VoiceManager,
+        q: Queue,
+        start_scene: Scene,
+        end_scene: Scene,
+        loop_speed: float,
+        loop_count: int,
+        sleep_time: int
+        ) -> None:
+
+    vc = vm.get_voice_controller(RatioVoice)
+    
+    logger.info(vm)
+    logger.info(vc)
+
+    vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
+    vm.load_front_scene(start_scene)
+    
+    vm.all_on()
+    vm.set_all_voice_ratios(0.0)
+    vm.queue_all_midi()
+
+    time.sleep(sleep_time)
+
+    for k in range(loop_count):
+        vc.cycle_notes(loop_time=loop_speed, steps=1000, timing=True)
+
+
+        for r in organ:
+            stops = [s for s in r.stops if s.size is not None and not s.state.active]
+            try:
+                stop = random.choice(stops)
+            except IndexError:
+                logger.error(f"No more stops to pull on {r.name}.")
+                continue
+            stop_event = stop.get_stop_event(NoteAction.PRESS)
+            q.put(stop_event)
+            #logger.info(stop)
+            #logger.info(stop_event)
+            time.sleep(sleep_time/len(organ))
+
+        vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
+
+        logger.info("Heading into final scene.")
+
+    vm.load_scene(end_scene)
+    vc.cycle_notes(loop_time=loop_speed*10, steps=1000, timing=True)
+
+    for r in organ:
+        for s in r.stops:
+            se = s.get_stop_event(NoteAction.PRESS)
+            logger.info(se)
+            q.put(se)
+            time.sleep(0.1)
+
+    time.sleep(sleep_time*2)
+
+    vm.all_off()
+
+    for r in organ:
+        for s in r.stops:
+            se = s.get_stop_event(NoteAction.RELEASE)
+            q.put(se)
+
+
+def test_stops(organ: Organ, q: Queue):
+    for r in organ:
+        stops = [s for s in r.stops if s.size is not None]
+        ss = random.sample(stops, 4)
+        for s in ss:
+            se = s.get_stop_event(NoteAction.PRESS)
+            q.put(se)
+            time.sleep(0.5)
+
+    time.sleep(1)
+
+    for r in organ:
+        for s in r.stops:
+            se = s.get_stop_event(NoteAction.RELEASE)
+            q.put(se)
+
+    time.sleep(1)
+
+    for r in organ:
+        for s in r.stops:
+            se = s.get_stop_event(NoteAction.PRESS)
+            q.put(se)
+
+    time.sleep(1)
+
+    for r in organ:
+        for s in r.stops:
+            se = s.get_stop_event(NoteAction.RELEASE)
+            q.put(se)
+
+
 def main() -> None:
+
+    VOICE_COUNT: int = 54
+    LOOP_SPEED: float = 0.01
+    LOOP_COUNT: int = 4
+    SLEEP_TIME: int = 1
+    DEBUG_ON: bool = False
+    TEST_STOPS: bool = False
+    PLAY_SONG: bool = True
 
     logger.info("Tentative Name:")
     logger.info("Organ Iced Chaos")
 
-    if True:
+    if not DEBUG_ON:
         logger.remove()
         import sys
         logger.add(sys.stderr, level="INFO")
@@ -80,22 +175,128 @@ def main() -> None:
     for r in organ:
         logger.info(r)
 
-    #midi_port = get_midi_port()
-    #logger.info(f"Using MIDI port: {midi_port}")
+    midi_output: MidiOutput = MidiOutput(midi_config)
+    midi_output.start_midi_output_thread()
+    queue: Queue = midi_output.queue
+
+    vm = VoiceManager(organ, midi_output.queue)
+    vm.create_random_voices(VOICE_COUNT, voice_cls = RatioVoice)  
+
+    if TEST_STOPS:
+        test_stops(organ, queue)
+        time.sleep(1)
+
+    # Turn on random stops for the start
+    for r in organ:
+        stops = [s for s in r.stops if s.size is not None]
+        ss = random.sample(stops, 2)
+        for s in ss:
+            se = s.get_stop_event(NoteAction.PRESS)
+            queue.put(se)
+
+    # Create the start and end scenes
+    final_scene_notes = get_all_notes(organ, key_notes=["C", "E", "G"])
+    final_scene = FavourHighScene(final_scene_notes)
+
+    start_scene_notes = {}
+    for r in organ:
+        start_scene_notes[r] = [NoteName.N60 for n in r]
+    start_scene = Scene(start_scene_notes)
+
+    if PLAY_SONG:
+        #Test the song
+        try:
+            test_song(organ, vm, queue, start_scene, final_scene, LOOP_SPEED, LOOP_COUNT, SLEEP_TIME)
+        except Exception as e:
+            logger.error(f"Exception encountered during test song.")
+            logger.error(e)
+
+    midi_output.stop_midi_output_thread()
+    midi_output.panic()
+
+
+########
+########
+########
+
+def main_OLD() -> None:
+
+    logger.info("Tentative Name:")
+    logger.info("Organ Iced Chaos")
+
+    if False:
+        logger.remove()
+        import sys
+        logger.add(sys.stderr, level="INFO")
+
+    common_config = load_config(get_full_path("config/common.yml"))
+    midi_config = common_config.get("midi_config")
+    organ_config = load_config(get_full_path(f"config/{common_config.get('organ_config_file')}"))
+
+    organ: Organ = Organ(organ_config)
+
+    logger.info(organ)
+    for r in organ:
+        logger.info(r)
 
     midi_output: MidiOutput = MidiOutput(midi_config)
     midi_output.start_midi_output_thread()
 
     vm = VoiceManager(organ, midi_output.queue)
     #vm.create_random_voices(1, voice_cls = WebVoice)
-    vm.create_random_voices(54, voice_cls = RatioVoice)
-    vm.assign_random_ranges(["C", "E", "G"], keep_current = False)
+    vm.create_random_voices(1, voice_cls = RatioVoice)
+
+    q: Queue = midi_output.queue
+
+
+    for r in organ:
+        stops = [s for s in r.stops if s.size is not None]
+        ss = random.sample(stops, 3)
+        for s in ss:
+            se = s.get_stop_event(NoteAction.PRESS)
+            q.put(se)
+
+    time.sleep(1)
+
+    for r in organ:
+        for s in r.stops:
+            se = s.get_stop_event(NoteAction.RELEASE)
+            q.put(se)
+    
+    time.sleep(1)
+
+    for r in organ:
+        stops = [s for s in r.stops if s.size is not None]
+        ss = random.sample(stops, 3)
+        for s in ss:
+            se = s.get_stop_event(NoteAction.PRESS)
+            q.put(se)
+    
+
+    if False:
+        from scenes.scenes import get_all_notes, Scene, FavourLowScene, FavourHighScene
+        final_scene_notes = get_all_notes(organ, key_notes=["C", "E", "G"])
+        final_scene = FavourHighScene(final_scene_notes)
+
+        start_scene_notes = {}
+        for r in organ:
+            start_scene_notes[r] = [NoteName.N60 for n in r]
+
+        start_scene = Scene(start_scene_notes)
+
+        vm.load_front_scene(start_scene)
+        vm.load_scene(final_scene)
+    else:
+        vm.assign_random_ranges(["C", "E", "G"], keep_current = False)
+
 
     try:
         test_voices(vm, midi_output.queue)
     except KeyboardInterrupt:
         midi_output.stop_midi_output_thread()
         midi_output.panic()
+
+
     midi_output.stop_midi_output_thread()
     return
 
