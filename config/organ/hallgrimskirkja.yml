@@ -262,28 +262,28 @@ registers:
         size: 2
         duplicates: false
       N58:
-      stop_name: "Waldflöte 2'"
+        stop_name: "Waldflöte 2'"
         size: 2
         duplicates: false
       N59:
         stop_name: "Larigot 2f"
         size: null
-        mixture: 2f
+        mixture: 2
         duplicates: false
       N60:
         stop_name: "Sesquialter 2f"
         size: null
-        mixture: 2f
+        mixture: 2
         duplicates: false
       N61:
         stop_name: "Scharff 5f"
         size: null
-        mixture: 5f
+        mixture: 5
         duplicates: false
       N62:
         stop_name: "Cymbel 4f"
         size: null
-        mixture: 4f
+        mixture: 4
         duplicates: false
       N63:
         stop_name: "Dulcian 16'"
