@@ -140,13 +140,17 @@ StopEvent = HallgrimskirkjaStopEvent
 @dataclass
 class Stop:
     name: NoteName
-    #register: "Register"
     stop_name: str
-    #number: int
-    size: int|None
-    duplicates: bool
+    size: int|float|None = None
+    mixture: int|None = None
+    effect: bool = False
+    duplicates: bool = False
+    partial: bool = False
     state: StopState = field(init=False)
     register: "Register" = None
+
+    def __post_init__(self) -> None:
+        self.note_name = NoteName[f"N{self.number}"]
 
     def __post_init__(self):
         self.state = StopState(self)
@@ -159,7 +163,7 @@ class Stop:
         return StopEvent(self, self.state.process_action(action))
 
     def __repr__(self) -> str:
-        return f"<Stop {self.stop_name} on {self.register.name}: {self.state.active=}>"
+        return f"<Stop {self.stop_name} (note #{self.name.value}) on {self.register.name if None else '<pending>'}: {('ON' if self.state.active else 'OFF'):3}>"
 
 @total_ordering
 class Note:
