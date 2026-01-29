@@ -157,8 +157,8 @@ def main() -> None:
     LOOP_COUNT: int = 4
     SLEEP_TIME: int = 2
     DEBUG_ON: bool = False
-    TEST_STOPS: bool = False
-    PLAY_SONG: bool = True
+    TEST_STOPS: bool = True
+    PLAY_SONG: bool = False
 
     logger.info("Tentative Name:")
     logger.info("Organ Iced Chaos")
