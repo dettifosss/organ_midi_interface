@@ -152,7 +152,7 @@ def test_stops(organ: Organ, q: Queue):
 
 def main() -> None:
 
-    VOICE_COUNT: int = 54
+    VOICE_COUNT: int = 26
     LOOP_SPEED: float = 0.01
     LOOP_COUNT: int = 4
     SLEEP_TIME: int = 2
@@ -192,7 +192,7 @@ def main() -> None:
     # Turn on random stops for the start
     for r in organ:
         stops = [s for s in r.stops if s.size is not None]
-        ss = random.sample(stops, 2)
+        ss = random.sample(stops, 1)
         for s in ss:
             se = s.get_stop_event(NoteAction.PRESS)
             queue.put(se)
