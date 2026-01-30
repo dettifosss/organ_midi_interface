@@ -34,9 +34,10 @@ class Scene:
 		}
 		self._taken_notes = {r: [] for r in register_notes.keys()}
 
-	def get_note(self, register: Register) -> NoteName:
+	def get_note(self, register: Register, exclude: NoteName|None=None) -> NoteName:
 		try:
-			selected = self._choose_note(self._register_notes[register])
+			included_notes: list[NoteName] = [n for n in self._register_notes[register] if exclude is None or n != exclude]
+			selected = self._choose_note(included_notes)
 			self._take_note(register, selected)
 		except IndexError:
 			logger.warning(f"Out of notes when trying to assign. Need to re-use.")
@@ -57,3 +58,7 @@ class FavourLowScene(Scene):
 class FavourHighScene(Scene):
 	def _choose_note(self, notes: list[NoteName]) -> NoteName:
 		return notes[-1]
+
+class RepeatsAllowedScene(Scene):
+	def _take_note(self, register: Register, note: NoteName) -> None:
+		self._taken_notes[register].append(note)

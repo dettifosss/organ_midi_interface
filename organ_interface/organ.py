@@ -163,7 +163,7 @@ class Stop:
         return StopEvent(self, self.state.process_action(action))
 
     def __repr__(self) -> str:
-        return f"<Stop {self.stop_name} (note #{self.name.value}) on {self.register.name if None else '<pending>'}: {('ON' if self.state.active else 'OFF'):3}>"
+        return f"<Stop {self.stop_name} (note #{self.name.value}) on {self.register.name if self.register.name is not None else '<pending>'}: {('ON' if self.state.active else 'OFF'):3}>"
 
 @total_ordering
 class Note:

@@ -83,6 +83,8 @@ class MidiOutput:
                         continue
                     #logger.debug(f"SENDING <{msg.midi_message}> to {port}")
                     
+                    #logger.info(f"SENDING {msg.midi_message}")
+
                     now = monotonic_ns()
                     delta = now - last_send_ts
                     sleep(max(0, (min_gap_ns - delta) / ns_per_s))

@@ -152,16 +152,21 @@ def test_stops(organ: Organ, q: Queue):
 
 def main() -> None:
 
-    VOICE_COUNT: int = 26
+    PANIC: bool = True
+    PANIC: bool = False
+
+    VOICE_COUNT: int = 10
     LOOP_SPEED: float = 0.01
     LOOP_COUNT: int = 4
     SLEEP_TIME: int = 2
     DEBUG_ON: bool = False
-    TEST_STOPS: bool = True
+    TEST_STOPS: bool = False
     PLAY_SONG: bool = False
+    USE_SONG_MANAGER: bool = True
 
-    logger.info("Tentative Name:")
-    logger.info("Organ Iced Chaos")
+    logger.info("#############################")
+    logger.info("Glundroði fyrir orgel í C-dúr")
+    logger.info("#############################")
 
     if not DEBUG_ON:
         logger.remove()
@@ -180,10 +185,23 @@ def main() -> None:
 
     midi_output: MidiOutput = MidiOutput(midi_config)
     midi_output.start_midi_output_thread()
+    if PANIC:
+        midi_output.send_stop_event()
+        return
+
     queue: Queue = midi_output.queue
 
     vm = VoiceManager(organ, midi_output.queue)
     vm.create_random_voices(VOICE_COUNT, voice_cls = RatioVoice)  
+
+    if USE_SONG_MANAGER:
+        try:
+            from scenes.song_manager import SongManager
+            sm: SongManager = SongManager(vm, organ)
+            sm.play_song()
+        except Exception as e:
+            midi_output.send_stop_event()
+            raise e
 
     if TEST_STOPS:
         test_stops(organ, queue)

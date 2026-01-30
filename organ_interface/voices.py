@@ -245,8 +245,7 @@ class VoiceController:
 				v.queue_midi(self.queue)
 			except AttributeError as e:
 				logger.error(e)
-				for v in vm:
-					logger.error(v)
+				logger.error(v)
 
 	def all_on(self):
 		for v in self:
@@ -281,7 +280,7 @@ class RatioVoiceController(VoiceController):
 		for v in self:
 			v.ratio += delta
 
-	def cycle_notes(self, loop_time: float=0.01, steps: int=10000, timing:bool=False):
+	def cycle_notes(self, loop_time: float=0.01, steps: int=1000, timing:bool=False):
 	    self.set_all_voice_ratios(0.0)
 	    if timing:
 	        times = []
@@ -375,13 +374,19 @@ class VoiceManager:
 	def get_voices_by_class(self, voice_cls: type[Voice]) -> Iterator[type[Voice]]:
 		return filter(lambda v: isinstance(v, voice_cls), self)
 
-	def load_scene(self, scene: Scene) -> None:
+	def load_scene(self, scene: Scene, allow_same: bool=False) -> None:
 		for v in self:
-			v.create_note_list(v[0], scene.get_note(v.register), reset=True)
+			if allow_same:
+				v.create_note_list(v[0], scene.get_note(v.register), reset=True)
+			else:
+				v.create_note_list(v[0], scene.get_note(v.register, exclude=v[0]), reset=True)
 
-	def load_front_scene(self, scene: Scene) -> None:
+	def load_front_scene(self, scene: Scene, allow_same: bool=False) -> None:
 		for v in self:
-			v.create_note_list(scene.get_note(v.register), v[-1], reset=True)
+			if allow_same:
+				v.create_note_list(scene.get_note(v.register), v[-1], reset=True)
+			else:
+				v.create_note_list(scene.get_note(v.register, exclude=v[-1]), v[-1], reset=True)
 
 	def __getattr__(self, name):
 		def dispatcher(*args, **kwargs):
