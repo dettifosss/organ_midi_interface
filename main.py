@@ -190,7 +190,7 @@ def main() -> None:
         return
 
     queue: Queue = midi_output.queue
-
+    
     vm = VoiceManager(organ, midi_output.queue)
     vm.create_random_voices(VOICE_COUNT, voice_cls = RatioVoice)  
 

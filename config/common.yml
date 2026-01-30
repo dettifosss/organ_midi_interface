@@ -4,6 +4,7 @@ midi_config:
   midi_interface_names:
     - loopMIDI
     - ESI MIDIMATE eX Port 1
+    - U6MIDI Pro Port 1
   min_gap_ns: 0
   queue_size: 1024
 

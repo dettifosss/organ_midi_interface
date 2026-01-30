@@ -49,7 +49,7 @@ class SongManager:
 
 	def stop_intro(self) -> None:
 		all_stops: list[Stop] = self._stops.values()
-		n_stops: int = len(stops)
+		n_stops: int = len(self._stops)
 		self._send_stop_events(8, all_stops, NoteAction.PRESS)
 		self._send_stop_events(6, all_stops, NoteAction.RELEASE)
 		self._send_stop_events(4, all_stops, NoteAction.PRESS)
@@ -89,7 +89,7 @@ class SongManager:
 			logger.info(v)
 
 		# Play intro
-		#self.stop_intro()
+		self.stop_intro()
 		
 		scene_0 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N60]))
 		scene_1 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N64, NoteName.N72]))
