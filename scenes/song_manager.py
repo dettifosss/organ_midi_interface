@@ -184,8 +184,8 @@ class SongManager:
 		logger.info("finale")
 		time.sleep(4)
 
-		vm.all_off()
-        vm.queue_all_midi()
+	    vm.all_off()
+	    vm.queue_all_midi()
 
 		time.sleep(1)
 
