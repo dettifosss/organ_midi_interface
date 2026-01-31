@@ -45,11 +45,11 @@ registers:
         effect: true
         duplicates: false
       N8:
-        stop_name: "Super III an II"
+        stop_name: "Super III"
         size: null
         duplicates: true
       N9:
-        stop_name: "Sub III an II"
+        stop_name: "Sub III - II"
         size: null
         duplicates: true
 
@@ -139,7 +139,7 @@ registers:
         effect: true
         duplicates: false
       N30:
-        stop_name: "IV an III"
+        stop_name: "IV - III"
         size: null
         duplicates: true
 
@@ -222,15 +222,15 @@ registers:
         size: 4
         duplicates: false
       N48:
-        stop_name: "I an II"
+        stop_name: "I - II"
         size: null
         duplicates: true
       N49:
-        stop_name: "III an II"
+        stop_name: "III - II"
         size: null
         duplicates: true
       N50:
-        stop_name: "IV an II"
+        stop_name: "IV - II"
         size: null
         duplicates: true
 
@@ -303,7 +303,7 @@ registers:
         effect: true
         duplicates: false
       N66:
-        stop_name: "III an I"
+        stop_name: "III - I"
         size: null
         duplicates: true
 
@@ -374,19 +374,19 @@ registers:
         size: 2
         duplicates: false
       N82:
-        stop_name: "I"
+        stop_name: "I - P"
         size: null
         duplicates: true
       N83:
-        stop_name: "II"
+        stop_name: "II - P"
         size: null
         duplicates: true
       N84:
-        stop_name: "III"
+        stop_name: "III - P"
         size: null
         duplicates: true
       N85:
-        stop_name: "IV"
+        stop_name: "IV - P"
         size: null
         duplicates: true
       N86:
