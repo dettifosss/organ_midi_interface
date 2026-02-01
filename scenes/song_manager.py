@@ -61,6 +61,7 @@ class SongManager:
 
     def get_adjusted_notes(self, notes: list[Note]) -> dict[Register, list[NoteName]]:
         n = {r: notes for r in self._registers if r.name != 'Pedal'}
+        print(n > self._organ["Pedal"].highest_note)
         n[self._organ['Pedal']] = [NoteName(n.value - 12) for n in notes]
         return n
 
@@ -97,8 +98,6 @@ class SongManager:
         scene_0 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N60]))
         scene_1 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N64, NoteName.N72]))
         scene_2 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N60, NoteName.N64, NoteName.N72]))
-
-        return
 
         vm.load_front_scene(scene_0)        
         vm.load_scene(scene_1)
