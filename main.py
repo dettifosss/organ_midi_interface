@@ -155,7 +155,7 @@ def main() -> None:
     PANIC: bool = True
     PANIC: bool = False
 
-    VOICE_COUNT: int = 10
+    VOICE_COUNT: int = 0
     LOOP_SPEED: float = 0.01
     LOOP_COUNT: int = 4
     SLEEP_TIME: int = 2

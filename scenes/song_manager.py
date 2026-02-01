@@ -95,6 +95,8 @@ class SongManager:
 		scene_1 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N64, NoteName.N72]))
 		scene_2 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N60, NoteName.N64, NoteName.N72]))
 
+		return
+
 		vm.load_front_scene(scene_0)		
 		vm.load_scene(scene_1)
 
