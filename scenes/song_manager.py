@@ -7,7 +7,9 @@ from organ_interface.organ import Organ, Register, Note, Stop, NoteEvent, StopEv
 from organ_interface.note_attributes import NoteName, NoteAction
 from organ_interface.voices import RatioVoice, VoiceManager, Voice
 
-from .scenes import Scene, get_all_notes, RepeatsAllowedScene, FavourLowScene, FavourHighScene, Scene
+from .scenes import Scene, get_all_notes, RepeatsAllowedScene, FavourLowScene, FavourHighScene
+
+import random
 
 class SongManager:
     def __init__(self, vm: VoiceManager, organ: Organ) -> None:
@@ -16,7 +18,7 @@ class SongManager:
         self._organ: Organ = organ
         self._queue: Queue = vm.queue
         self._registers: list[Register] = list(organ)
-        self._stops: dict[NotaName, Stop] = {s.name: s for r in self._registers for s in r.stops if s.duplicates is False and s.effect is False}
+        self._stops: dict[NoteName, Stop] = {s.name: s for r in self._registers for s in r.stops if s.duplicates is False and s.effect is False}
 
     def _send_stop_events(self, time_taken:int, stops: list[Stop], action: NoteAction=NoteAction.PRESS, sleep_first: bool=True) -> None:
         if len(stops) <= 0:
@@ -51,7 +53,7 @@ class SongManager:
             logger.error(f"Queue is full. Dropped: {event}")
 
     def stop_intro(self) -> None:
-        all_stops: list[Stop] = self._stops.values()
+        all_stops: list[Stop] = list(self._stops.values())
         n_stops: int = len(self._stops)
         self._send_stop_events(8, all_stops, NoteAction.PRESS)
         self._send_stop_events(6, all_stops, NoteAction.RELEASE)
@@ -64,7 +66,7 @@ class SongManager:
 
     def get_adjusted_notes(self, notes: list[Note]) -> dict[Register, list[NoteName]]:
         r_pedal = self._organ["Pedal"]
-        n = {r: notes for r in self._registers if r_pedal}
+        n = {r: notes for r in self._registers if r != r_pedal}
         n[r_pedal] = []
         for note in notes:
             if note >= r_pedal.lowest_note_name and note <= r_pedal.highest_note_name:
@@ -110,10 +112,26 @@ class SongManager:
         stop_set_3 = [72, 61, 44, 24]
 
 
-        for r in organ:
-            print(r.stops)
+        # Create Random Stops for after the soft stops
+        random_stops_1 = []
+        exclude_1 = stop_set_soft
+        for k in range(3):
+            stops = []
+            for r in organ:
+                stop_ints = [s.name.value for s in r.stops if (s.size is not None or s.mixture is not None) and s.name.value not in exclude_1]
+                stops.append(random.choice(stop_ints))
+            random_stops_1.append(stops)
+            exclude_1 = stops
 
-        return
+        random_stops_2 = []
+        exclude_2 = [*stop_set_soft, *stop_set_2]
+        for k in range(4):
+            stops = []
+            for r in organ:
+                stop_ints = [s.name.value for s in r.stops if (s.size is not None or s.mixture is not None) and s.name.value not in exclude_2]
+                stops.extend(random.sample(stop_ints, 2))
+            random_stops_2.append(stops)
+            exclude_2 = stops
 
         for v in vm:
             logger.info(v)
@@ -187,58 +205,75 @@ class SongManager:
 
         vc.cycle_notes(loop_time=0.02)
 
-        time.sleep(2)
+        time.sleep(4)
+        self.reset_ranges()
 
         # Random stops:
+        logger.info("Random Stops here")
+        self._send_stop_events_by_int(0, stop_set_soft, NoteAction.RELEASE)
+        for stops in random_stops_1:
+            self._send_stop_events_by_int(0, stops, NoteAction.PRESS)
+            vc.cycle_notes(loop_time=0.01)
+            time.sleep(1)
+            self.reset_ranges()
+            self._send_stop_events_by_int(0, stops, NoteAction.RELEASE)
 
-        for k in range(4):
-            pass
-
+        time.sleep(1)
 
         logger.info("Second set of stops")    
         if not TESTING:        
+            self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
             self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS)
         else:
             time.sleep(2)
 
         self.reset_ranges()
 
-
-        return
-
-        # # # # #
-        # Add some looping here.
-        # # # # # 
-
-        logger.info("all notes to C")
-        vm.load_scene(scene_0, allow_same=True)
         vc.cycle_notes(loop_time=0.01, steps=1000)
-
-        logger.info("More stops on C")
-        self._send_stop_events_by_int(2, stop_set_3)
-
-        time.sleep(2)
-
         self.reset_ranges()
-        vc.cycle_notes(loop_time=0.01, steps=1000)
 
-        logger.info("Quick through C")
+        logger.info("Cycle through C with stop changes")
+        last_stops = [*stop_set_soft, *stop_set_2]
+        for stops in random_stops_2:
+            vm.load_scene(scene_0, allow_same=True)
+            vc.cycle_notes(loop_time=0.005, steps=1000)
+            self.reset_ranges()
+            self._send_stop_events_by_int(0, last_stops, NoteAction.RELEASE)
+            self._send_stop_events_by_int(0, stops, NoteAction.PRESS)
+            last_stops = stops
+            vc.cycle_notes(loop_time=0.005, steps=1000)
+            time.sleep(2)
+            self.reset_ranges()
+
+        logger.info("Quick through C load presets")
+        vc.cycle_notes(loop_time=0.0005, steps=1000)
+        self._send_stop_events_by_int(1, last_stops, NoteAction.RELEASE)
+        self._send_stop_events_by_int(1, stop_set_3, NoteAction.PRESS)
         self.reset_ranges()
-        vm.load_scene(scene_0, allow_same=True)
+        vc.cycle_notes(loop_time=0.0005, steps=1000)
+        self._send_stop_events_by_int(2, stop_set_2, NoteAction.PRESS)
+        self.reset_ranges()
+        vc.cycle_notes(loop_time=0.0005, steps=1000)
+        self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
+        self.reset_ranges()
+        vc.cycle_notes(loop_time=0.0005, steps=1000)
         time.sleep(1)
-
-        vc.cycle_notes(loop_time=0.001, steps=1000)
-
         self.reset_ranges()
-        vc.cycle_notes(loop_time=0.001, steps=1000)
+        vc.cycle_notes(loop_time=0.00005, steps=1000)
+        time.sleep(0.5)
+        self.reset_ranges()
+        
+        for k in range(15)
+            vc.cycle_notes(loop_time=0.00005, steps=1000)
+            self.reset_ranges()
         
         time.sleep(2)
-        
+
         logger.info("Loading 10 more voices")
-        for k in range(10):
+        for k in range(15):
             v = self.add_voice()
             logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
-            time.sleep(0.5)
+            time.sleep(2)
 
         time.sleep(3)
 
@@ -251,7 +286,6 @@ class SongManager:
             time.sleep(2)
             self.reset_ranges()
 
-
         logger.info("Fast Cycles")
         for k in range(3):
             vc.cycle_notes(loop_time=0.001, steps=1000)
@@ -259,7 +293,6 @@ class SongManager:
             time.sleep(2)
             self.reset_ranges()
         
-
         time.sleep(1)
         
         logger.info(f"final rise with {len(vm)} voices")
