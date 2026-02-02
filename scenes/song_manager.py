@@ -105,6 +105,16 @@ class SongManager:
         #vm.create_voice(f"Bombardwerk-init-1", organ["Bombardwerk"], RatioVoice)
         #vm.create_voice(f"Bombardwerk-init-2", organ["Bombardwerk"], RatioVoice)
 
+        stop_set_soft = [1, 14, 33, 53, 69]
+        stop_set_2 = [2, 12, 35, 55, 79]
+        stop_set_3 = [72, 61, 44, 24]
+
+
+        for r in organ:
+            print(r.stops)
+
+        return
+
         for v in vm:
             logger.info(v)
 
@@ -141,7 +151,7 @@ class SongManager:
         
         # Set soft stops
         if not TESTING:
-            self._send_stop_events_by_int(5, [1, 14, 33, 53, 69], NoteAction.PRESS)
+            self._send_stop_events_by_int(5, stop_set_soft, NoteAction.PRESS)
 
         if not TESTING:
             time.sleep(1)
@@ -177,19 +187,35 @@ class SongManager:
 
         vc.cycle_notes(loop_time=0.02)
 
+        time.sleep(2)
+
+        # Random stops:
+
+        for k in range(4):
+            pass
+
+
         logger.info("Second set of stops")    
         if not TESTING:        
-            self._send_stop_events_by_int(4, [2, 12, 35, 55, 79], NoteAction.PRESS)
+            self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS)
         else:
             time.sleep(2)
 
         self.reset_ranges()
+
+
+        return
+
+        # # # # #
+        # Add some looping here.
+        # # # # # 
+
         logger.info("all notes to C")
         vm.load_scene(scene_0, allow_same=True)
         vc.cycle_notes(loop_time=0.01, steps=1000)
 
         logger.info("More stops on C")
-        self._send_stop_events_by_int(2, [72, 61, 44, 24])
+        self._send_stop_events_by_int(2, stop_set_3)
 
         time.sleep(2)
 
