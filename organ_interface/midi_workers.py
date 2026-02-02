@@ -42,6 +42,19 @@ class MidiOutput:
         with open_output(self._port_name) as tmp_port:
             tmp_port.panic()
 
+    def send_note_off_all(self) -> None:
+        logger.info("Sending note_off to all notes on all channels.")
+        with open_output(self._port_name) as tmp_port:           
+            for c in range(0, 16):
+                for n in range(0, 127):
+                    midi_message = MidiMessage(
+                        type = 'note_off',
+                        note = n,
+                        velocity = 127,
+                        channel = c
+                    )
+                    tmp_port.send(midi_message)
+
     def send_stop_event(self) -> None:
         logger.info("Sending STOP event to MidiOutput")
 
@@ -101,11 +114,14 @@ class MidiOutput:
             finally:
                 logger.info("MIDI sender exiting")
                 port.panic()
+        self.send_note_off_all()
 
     def start_midi_output_thread(self) -> None:
         self.panic()
+        self.send_note_off_all()
         self._thread: Thread = Thread(target=self.midi_listener, daemon=True)
         self._thread.start()
+
         
     def stop_midi_output_thread(self) -> None:
         self.send_stop_event()
@@ -113,4 +129,5 @@ class MidiOutput:
             self._thread.join(timeout=1.0)
         self._thread = None
         self.panic()
+        self.send_note_off_all()
         

@@ -41,6 +41,9 @@ class SongManager:
     def _get_stops_by_int(self, nums: list[int]) -> list[Stop]:
         return self._get_stops([NoteName[f"N{n}"] for n in nums])
 
+    def _get_notes_by_int(self, nums: list[int]) -> list[NoteName]:
+        return [NoteName(n) for n in nums]
+
     def _queue_event(self, event: NoteEvent|StopEvent):
         try:
             self._queue.put(event)
@@ -60,9 +63,19 @@ class SongManager:
         time.sleep(0.5)
 
     def get_adjusted_notes(self, notes: list[Note]) -> dict[Register, list[NoteName]]:
-        n = {r: notes for r in self._registers if r.name != 'Pedal'}
-        print(n > self._organ["Pedal"].highest_note)
-        n[self._organ['Pedal']] = [NoteName(n.value - 12) for n in notes]
+        r_pedal = self._organ["Pedal"]
+        n = {r: notes for r in self._registers if r_pedal}
+        n[r_pedal] = []
+        for note in notes:
+            if note >= r_pedal.lowest_note_name and note <= r_pedal.highest_note_name:
+                n[self._organ["Pedal"]].append(note)
+                continue
+            n_temp = note
+            while n_temp > r_pedal.highest_note_name:
+                n_temp = NoteName(n_temp.value - 24)
+            if n_temp < r_pedal.lowest_note_name:
+                n_temp = NoteName(n_temp.value + 12)
+            n[self._organ["Pedal"]].append(n_temp)
         return n
 
     def add_voice(self) -> Voice:
@@ -74,7 +87,7 @@ class SongManager:
 
     def reset_ranges(self) -> None:
         self._vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
-    
+
     def play_song(self) -> None:
 
         TESTING: bool = True
@@ -86,7 +99,11 @@ class SongManager:
 
         # Ensure each register has a voice.
         for r in organ:
-            vm.create_voice(f"{r.name}-manual", r, RatioVoice) 
+            vm.create_voice(f"{r.name}-init-1", r, RatioVoice) 
+            vm.create_voice(f"{r.name}-init-2", r, RatioVoice) 
+
+        #vm.create_voice(f"Bombardwerk-init-1", organ["Bombardwerk"], RatioVoice)
+        #vm.create_voice(f"Bombardwerk-init-2", organ["Bombardwerk"], RatioVoice)
 
         for v in vm:
             logger.info(v)
@@ -94,12 +111,26 @@ class SongManager:
         # Play intro
         if not TESTING:
             self.stop_intro()
-        
-        scene_0 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N60]))
-        scene_1 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N64, NoteName.N72]))
-        scene_2 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N48, NoteName.N55, NoteName.N60, NoteName.N64, NoteName.N72]))
 
-        vm.load_front_scene(scene_0)        
+        scene_0 = RepeatsAllowedScene(self.get_adjusted_notes([NoteName.N60]))
+        scene_1 = Scene(self.get_adjusted_notes([NoteName.N55, NoteName.N64]))
+
+        starting_scenes_notes = [
+            [48], # C
+            [60, 72], # C & C
+            [55, 43], # G & G
+            [64, 76], # E & E
+            [48, 55, 60, 72],
+            [48, 55, 60, 64, 72, 76]
+            ]
+
+        starting_scenes = []
+        for notes in starting_scenes_notes:
+            starting_scenes.append(Scene(self.get_adjusted_notes(self._get_notes_by_int(notes))))
+
+        logger.info("Loading scene_0")
+        vm.load_front_scene(scene_0)  
+        logger.info("Loading scene_1")      
         vm.load_scene(scene_1)
 
         vm.all_on()
@@ -107,24 +138,51 @@ class SongManager:
         vm.queue_all_midi()
 
         logger.info("Setting initial stops")
+        
         # Set soft stops
-        self._send_stop_events_by_int(5, [1, 14, 33, 53, 69], NoteAction.PRESS)
+        if not TESTING:
+            self._send_stop_events_by_int(5, [1, 14, 33, 53, 69], NoteAction.PRESS)
 
-        time.sleep(1)
+        if not TESTING:
+            time.sleep(1)
 
         logger.info("Starting cycle")
-        for k in range(5):
-            vc.cycle_notes(loop_time=0.02/(2*k+1), steps=1000)
+        for k, scene in enumerate(starting_scenes):
+            vc.cycle_notes(loop_time=0.02/(2*k+1))
+            #for v in vm:
+            #    print(v.notes)
+
+            # Add an extra voice on step 5
+            if k == 2:
+                for r in organ:
+                    v = vm.create_voice(f"{r.name}-add-1", r, RatioVoice)
+                    n_0 = v.notes[0]
+                    for rv in vm:
+                        if rv.name == f"{r.name}-init-1":
+                            logger.info(rv.active_note)
+                            n_0 = rv.active_note
+                            #logger.info(n_0)
+                            break
+                    v.active_note = n_0
+                    v.assign_random_range(keep_current=True, reset=True)
+                    v.on()
+                    logger.info(f"Creating: {v}")
+                logger.info("Creating voice")
+            #for r in organ:
+            #    logger.info(f"Loading {r.name}: {[nn.pretty for nn in scene._register_notes[r]]}")
             self.reset_ranges()
-            vm.load_scene(scene_2)
-
+            vm.load_scene(scene)
+            logger.info(f"end of loop {k}")
             time.sleep(1)
-            logger.info(f"Cycle {k} end")
 
-        logger.info("Second set of stops")
-        self._send_stop_events_by_int(4, [2, 12, 35, 55, 79], NoteAction.PRESS)
+        vc.cycle_notes(loop_time=0.02)
 
-        #vm.assign_random_ranges(["C", "E", "G"], keep_current = True)
+        logger.info("Second set of stops")    
+        if not TESTING:        
+            self._send_stop_events_by_int(4, [2, 12, 35, 55, 79], NoteAction.PRESS)
+        else:
+            time.sleep(2)
+
         self.reset_ranges()
         logger.info("all notes to C")
         vm.load_scene(scene_0, allow_same=True)

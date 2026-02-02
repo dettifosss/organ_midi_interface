@@ -199,7 +199,7 @@ def main() -> None:
             from scenes.song_manager import SongManager
             sm: SongManager = SongManager(vm, organ)
             sm.play_song()
-        except Exception as e:
+        except (Exception, KeyboardInterrupt) as e:
             midi_output.send_stop_event()
             raise e
 

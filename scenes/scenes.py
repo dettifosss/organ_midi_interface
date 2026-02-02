@@ -24,7 +24,10 @@ class Scene:
             r: notes.copy()
             for r, notes in register_notes.items()
         }
-        self._register_notes = register_notes
+        self._register_notes = {
+            r: notes.copy()
+            for r, notes in register_notes.items()
+        }        
         self._taken_notes = {r: [] for r in register_notes.keys()}
 
     def reset(self) -> None:
@@ -32,7 +35,7 @@ class Scene:
             r: notes.copy()
             for r, notes in self._register_notes_copy.items()
         }
-        self._taken_notes = {r: [] for r in register_notes.keys()}
+        self._taken_notes = {r: [] for r in self._register_notes.keys()}
 
     def get_note(self, register: Register, exclude: NoteName|None=None) -> NoteName:
         try:
@@ -40,7 +43,7 @@ class Scene:
             selected = self._choose_note(included_notes)
             self._take_note(register, selected)
         except IndexError:
-            logger.warning(f"Out of notes when trying to assign. Need to re-use.")
+            logger.warning(f"Out of notes in {register.name} when trying to assign. Need to re-use.")
             selected = random.choice(self._register_notes_copy[register])
         return selected
 
@@ -62,3 +65,12 @@ class FavourHighScene(Scene):
 class RepeatsAllowedScene(Scene):
     def _take_note(self, register: Register, note: NoteName) -> None:
         self._taken_notes[register].append(note)
+
+class SpreadOut(Scene):
+    def _choose_note(self, notes: list[NoteName]) -> NoteName:
+        return
+        if len(self._taken_notes) == 0 or len(notes) == 1:
+            return notes[0]
+        if len(self._taken_notes) == 1:
+            return notes[-1]
+
