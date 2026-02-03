@@ -11,8 +11,8 @@ from queue import Queue, Full
 
 from abc import abstractmethod
 
-MAX_PEDAL_VOICES = 6
-MAX_VOICES = 12
+MAX_PEDAL_VOICES = 9 # was 6
+MAX_VOICES = 15 # was 12
 
 class Voice:
     def __init__(self, voice_id: str, register: Register) -> None:

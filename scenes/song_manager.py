@@ -4,7 +4,7 @@ from loguru import logger
 import time
 
 from organ_interface.organ import Organ, Register, Note, Stop, NoteEvent, StopEvent
-from organ_interface.note_attributes import NoteName, NoteAction
+from organ_interface.note_attributes import NoteName, NoteAction, get_note_subset
 from organ_interface.voices import RatioVoice, VoiceManager, Voice
 
 from .scenes import Scene, get_all_notes, RepeatsAllowedScene, FavourLowScene, FavourHighScene
@@ -92,7 +92,12 @@ class SongManager:
 
     def play_song(self) -> None:
 
-        TESTING: bool = True
+        TESTING: bool = False
+        LINEAR_FINALE: bool = False
+        LOAD_FINALE_STOPS: bool = True
+        ONLY_PLAY_FINALE: bool = False
+
+        EXTRA_VOICE_COUNT: int = 10
 
         vm = self._vm
         organ = self._organ
@@ -104,13 +109,17 @@ class SongManager:
             vm.create_voice(f"{r.name}-init-1", r, RatioVoice) 
             vm.create_voice(f"{r.name}-init-2", r, RatioVoice) 
 
-        #vm.create_voice(f"Bombardwerk-init-1", organ["Bombardwerk"], RatioVoice)
-        #vm.create_voice(f"Bombardwerk-init-2", organ["Bombardwerk"], RatioVoice)
-
         stop_set_soft = [1, 14, 33, 53, 69]
         stop_set_2 = [2, 12, 35, 55, 79]
         stop_set_3 = [72, 61, 44, 24]
 
+        finale_stops = [
+            0, 3, 5,
+            14, 17, 24, 19, 
+            33, 38, 45,
+            52, 54, 57,
+            67, 73, 79
+        ]
 
         # Create Random Stops for after the soft stops
         random_stops_1 = []
@@ -174,136 +183,207 @@ class SongManager:
         if not TESTING:
             time.sleep(1)
 
-        logger.info("Starting cycle")
-        for k, scene in enumerate(starting_scenes):
-            vc.cycle_notes(loop_time=0.02/(2*k+1))
-            #for v in vm:
-            #    print(v.notes)
+        if not ONLY_PLAY_FINALE:
+            logger.info("Starting cycle")
+            for k, scene in enumerate(starting_scenes):
+                vc.cycle_notes(loop_time=0.02/(2*k+1))
+                #for v in vm:
+                #    print(v.notes)
 
-            # Add an extra voice on step 5
-            if k == 2:
-                for r in organ:
-                    v = vm.create_voice(f"{r.name}-add-1", r, RatioVoice)
-                    n_0 = v.notes[0]
-                    for rv in vm:
-                        if rv.name == f"{r.name}-init-1":
-                            logger.info(rv.active_note)
-                            n_0 = rv.active_note
-                            #logger.info(n_0)
-                            break
-                    v.active_note = n_0
-                    v.assign_random_range(keep_current=True, reset=True)
-                    v.on()
-                    logger.info(f"Creating: {v}")
-                logger.info("Creating voice")
-            #for r in organ:
-            #    logger.info(f"Loading {r.name}: {[nn.pretty for nn in scene._register_notes[r]]}")
+                # Add an extra voice on step 5
+                if k == 2:
+                    for r in organ:
+                        v = vm.create_voice(f"{r.name}-add-1", r, RatioVoice)
+                        logger.info(f"New voice {v}")
+                        n_0 = v.notes[0]
+                        for rv in vm:
+                            if rv.name == f"{r.name}-init-1":
+                                logger.info(rv.active_note)
+                                n_0 = rv.active_note
+                                #logger.info(n_0)
+                                break
+                        v.active_note = n_0
+                        v.assign_random_range(keep_current=True, reset=True)
+                        v.on()
+                        logger.info(f"Creating: {v}")
+                    logger.info("Creating voice")
+                #for r in organ:
+                #    logger.info(f"Loading {r.name}: {[nn.pretty for nn in scene._register_notes[r]]}")
+                self.reset_ranges()
+                vm.load_scene(scene)
+                logger.info(f"end of loop {k}")
+                time.sleep(1)
+
+            logger.info("Slow loop with possible full range")
+            vc.cycle_notes(loop_time=0.02)
+
+            time.sleep(4)
             self.reset_ranges()
-            vm.load_scene(scene)
-            logger.info(f"end of loop {k}")
+
+            # Random stops:
+            logger.info("Random Stops here")
+            self._send_stop_events_by_int(0, stop_set_soft, NoteAction.RELEASE)
+            for stops in random_stops_1:
+                self._send_stop_events_by_int(0, stops, NoteAction.PRESS)
+                vc.cycle_notes(loop_time=0.01)
+                time.sleep(1)
+                self.reset_ranges()
+                self._send_stop_events_by_int(0, stops, NoteAction.RELEASE)
+
             time.sleep(1)
 
-        vc.cycle_notes(loop_time=0.02)
+            logger.info("Second set of stops")    
+            if not TESTING:        
+                self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
+                self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS)
+            else:
+                time.sleep(2)
 
-        time.sleep(4)
-        self.reset_ranges()
-
-        # Random stops:
-        logger.info("Random Stops here")
-        self._send_stop_events_by_int(0, stop_set_soft, NoteAction.RELEASE)
-        for stops in random_stops_1:
-            self._send_stop_events_by_int(0, stops, NoteAction.PRESS)
-            vc.cycle_notes(loop_time=0.01)
-            time.sleep(1)
             self.reset_ranges()
-            self._send_stop_events_by_int(0, stops, NoteAction.RELEASE)
 
-        time.sleep(1)
+            vc.cycle_notes(loop_time=0.01, steps=1000)
+            self.reset_ranges()
 
-        logger.info("Second set of stops")    
-        if not TESTING:        
+            logger.info("Cycle through C with stop changes")
+            last_stops = [*stop_set_soft, *stop_set_2]
+            for stops in random_stops_2:
+                vm.load_scene(scene_0, allow_same=True)
+                vc.cycle_notes(loop_time=0.005, steps=1000)
+                self.reset_ranges()
+                self._send_stop_events_by_int(0, last_stops, NoteAction.RELEASE)
+                self._send_stop_events_by_int(0, stops, NoteAction.PRESS)
+                last_stops = stops
+                vc.cycle_notes(loop_time=0.005, steps=1000)
+                time.sleep(2)
+                self.reset_ranges()
+
+            logger.info("Quick through C load presets")
+            vc.cycle_notes(loop_time=0.0005, steps=1000)
+            self._send_stop_events_by_int(1, last_stops, NoteAction.RELEASE)
+            self._send_stop_events_by_int(1, stop_set_3, NoteAction.PRESS)
+            self.reset_ranges()
+            vc.cycle_notes(loop_time=0.0005, steps=1000)
+            self._send_stop_events_by_int(2, stop_set_2, NoteAction.PRESS)
+            self.reset_ranges()
+            vc.cycle_notes(loop_time=0.0005, steps=1000)
             self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
-            self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS)
-        else:
-            time.sleep(2)
-
-        self.reset_ranges()
-
-        vc.cycle_notes(loop_time=0.01, steps=1000)
-        self.reset_ranges()
-
-        logger.info("Cycle through C with stop changes")
-        last_stops = [*stop_set_soft, *stop_set_2]
-        for stops in random_stops_2:
-            vm.load_scene(scene_0, allow_same=True)
-            vc.cycle_notes(loop_time=0.005, steps=1000)
             self.reset_ranges()
-            self._send_stop_events_by_int(0, last_stops, NoteAction.RELEASE)
-            self._send_stop_events_by_int(0, stops, NoteAction.PRESS)
-            last_stops = stops
-            vc.cycle_notes(loop_time=0.005, steps=1000)
-            time.sleep(2)
+            vc.cycle_notes(loop_time=0.0005, steps=1000)
+            time.sleep(1)
             self.reset_ranges()
-
-        logger.info("Quick through C load presets")
-        vc.cycle_notes(loop_time=0.0005, steps=1000)
-        self._send_stop_events_by_int(1, last_stops, NoteAction.RELEASE)
-        self._send_stop_events_by_int(1, stop_set_3, NoteAction.PRESS)
-        self.reset_ranges()
-        vc.cycle_notes(loop_time=0.0005, steps=1000)
-        self._send_stop_events_by_int(2, stop_set_2, NoteAction.PRESS)
-        self.reset_ranges()
-        vc.cycle_notes(loop_time=0.0005, steps=1000)
-        self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
-        self.reset_ranges()
-        vc.cycle_notes(loop_time=0.0005, steps=1000)
-        time.sleep(1)
-        self.reset_ranges()
-        vc.cycle_notes(loop_time=0.00005, steps=1000)
-        time.sleep(0.5)
-        self.reset_ranges()
-        
-        for k in range(15)
             vc.cycle_notes(loop_time=0.00005, steps=1000)
+            time.sleep(0.5)
             self.reset_ranges()
-        
-        time.sleep(2)
+            
+            for k in range(15):
+                vc.cycle_notes(loop_time=0.00005, steps=1000)
+                self.reset_ranges()  
+            #time.sleep(2)
 
-        logger.info("Loading 10 more voices")
-        for k in range(15):
+            vc.cycle_notes(loop_time=0.0001, steps=1000)
+            #time.sleep(0.5)
+            self.reset_ranges()
+            vc.cycle_notes(loop_time=0.0005, steps=1000)
+            self.reset_ranges()
+            vc.cycle_notes(loop_time=0.001, steps=1000)
+            self.reset_ranges()
+            vc.cycle_notes(loop_time=0.005, steps=1000)
+            time.sleep(1)
+            self.reset_ranges()
+
+            logger.info(f"Loading {EXTRA_VOICE_COUNT} more voices")
+            for k in range(EXTRA_VOICE_COUNT):
+                v = self.add_voice()
+                logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
+                time.sleep(1)
+
+            time.sleep(2)
+
+            self.reset_ranges()
+            
+            logger.info("Slow Cycles")
+            for k in range(2):
+                vc.cycle_notes(loop_time=0.01, steps=1000)
+                v = self.add_voice()
+                logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
+                time.sleep(2)
+                self.reset_ranges()
+
+        if LOAD_FINALE_STOPS:
+            logger.info("Loading finale stops")
+            self._send_stop_events(0, [s for s in list(self._stops.values()) if s not in finale_stops], NoteAction.RELEASE)
+            self._send_stop_events_by_int(0, finale_stops, NoteAction.PRESS)
+
+        logger.info("Fast Cycles")
+        for k in range(2):
+            vc.cycle_notes(loop_time=0.001, steps=1000)
             v = self.add_voice()
             logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
             time.sleep(2)
-
+            self.reset_ranges()
+        
         time.sleep(3)
-
-        self.reset_ranges()
-        
-        logger.info("Slow Cycles")
-        for k in range(3):
-            vc.cycle_notes(loop_time=0.01, steps=1000)
-            self.add_voice()
-            time.sleep(2)
-            self.reset_ranges()
-
-        logger.info("Fast Cycles")
-        for k in range(3):
-            vc.cycle_notes(loop_time=0.001, steps=1000)
-            self.add_voice()
-            time.sleep(2)
-            self.reset_ranges()
-        
-        time.sleep(1)
         
         logger.info(f"final rise with {len(vm)} voices")
 
-        vc.cycle_notes(loop_time=0.05, steps=1000)
+        if not TESTING:
+            vc.cycle_notes(loop_time=0.06, steps=1000)
+        else:
+            vc.cycle_notes(loop_time=0.005, steps=1000)
 
-        logger.info("Setting all stops")
-        self._send_stop_events(10, self._stops.values(), NoteAction.PRESS)
+        logger.info("Creating all the voices.")
+        queue = vm.queue
+        new_voices = []
+        for r in organ:
+            all_notes = get_note_subset(r.note_names, ["C", "E", "G"])
+            for n in r:
+                if n.state.active:
+                    logger.info(f"{n.name.pretty} already playing on {r.name}")
+                    all_notes.remove(n.name)
+            for num, note in enumerate(reversed(all_notes)):
+                v = vm.create_voice(f"{r.name}-finale-{num}", r, RatioVoice) 
+                v.active_note = note
+                v.assign_random_range(keep_current=True, reset=True)
+                new_voices.append(v)
+                logger.info(f"Creating new voice: {v}")
 
-        logger.info("finale")
-        time.sleep(4)
+        if LINEAR_FINALE:
+            logger.info("Setting all stops")
+            #if not TESTING:
+            all_stops = list(self._stops.values())
+            random.shuffle(all_stops)
+            logger.info(all_stops)
+            self._send_stop_events(10, all_stops, NoteAction.PRESS)
+
+            random.shuffle(new_voices)
+            for v in new_voices:
+                v.on()
+                v.queue_midi(queue)
+                logger.info(f"Starting new voice: {v}")
+                time.sleep(0.25)
+        else:
+            logger.info("Doing mixed finale")
+            all_stops = [s for s in list(self._stops.values()) if not s.state.active]
+            #random.shuffle(all_stops)
+
+            combined = all_stops + new_voices
+            random.shuffle(combined)
+            for obj in combined:
+                match obj: 
+                    case Stop():
+                        se = obj.get_stop_event(NoteAction.PRESS)
+                        self._queue_event(se)
+                        logger.info(f"Turning on stop {obj}")
+                    case Voice():
+                        obj.on()
+                        obj.queue_midi(queue)
+                        logger.info(f"Starting new voice: {obj}")
+                    case _:
+                        logger.warning(f"Unexpected object in finale: {obj!r}")
+                time.sleep(0.25)
+
+        logger.info("FIN.")
+        time.sleep(6)
 
         vm.all_off()
         vm.queue_all_midi()
@@ -311,6 +391,11 @@ class SongManager:
         time.sleep(1)
 
         self._send_stop_events(0, self._stops.values(), NoteAction.RELEASE)
+
+        ### ###
+        # Ensure the correct note on the final scene
+        # Pick a solid stop combo for the final climb.
+        # Make it possible to test each section.
 
 
         #final_scene = FavourLowScene(get_all_notes(organ, key_notes=["C", "E", "G"]))
