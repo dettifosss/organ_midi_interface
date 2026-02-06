@@ -46,6 +46,11 @@ class SongManager:
     def _get_notes_by_int(self, nums: list[int]) -> list[NoteName]:
         return [NoteName(n) for n in nums]
 
+    #def randomly_queue_events(self, events: list[NoteEvent|StopEvent]) -> None:
+    #    random.shuffle(events)
+    #    for event in events:
+    #        self._queue_event(event)
+
     def _queue_event(self, event: NoteEvent|StopEvent):
         try:
             self._queue.put(event)
@@ -147,7 +152,7 @@ class SongManager:
 
         random_stops_2 = []
         exclude_2 = [*stop_set_soft, *stop_set_2]
-        for k in range(4):
+        for k in range(3):
             stops = []
             for r in organ:
                 stop_ints = [s.name.value for s in r.stops if (s.size is not None or s.mixture is not None) and s.name.value not in exclude_2]
@@ -191,7 +196,7 @@ class SongManager:
         
         # Set soft stops
         if not TESTING:
-            self._send_stop_events_by_int(5, stop_set_soft, NoteAction.PRESS)
+            self._send_stop_events_by_int(5, stop_set_soft, NoteAction.PRESS, sleep_first=False)
 
         if not TESTING:
             time.sleep(1)
@@ -230,14 +235,14 @@ class SongManager:
             logger.info("Slow loop with possible full range")
             vc.cycle_notes(loop_time=0.02)
 
-            time.sleep(4)
+            time.sleep(1)
             self.reset_ranges()
 
             # Random stops:
             logger.info("Random Stops here")
-            self._send_stop_events_by_int(1, stop_set_soft, NoteAction.RELEASE)
+            self._send_stop_events_by_int(3, stop_set_soft, NoteAction.RELEASE)
             for stops in random_stops_1:
-                self._send_stop_events_by_int(1, stops, NoteAction.PRESS)
+                self._send_stop_events_by_int(4, stops, NoteAction.PRESS, sleep_first=False)
                 vc.cycle_notes(loop_time=0.01)
                 #time.sleep(1)
                 self.reset_ranges()
@@ -248,14 +253,14 @@ class SongManager:
             logger.info("Second set of stops")    
             if not TESTING:        
                 self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
-                self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS)
+                self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS, sleep_first=False)
             else:
                 time.sleep(2)
 
             self.reset_ranges()
 
-        vc.cycle_notes(loop_time=0.01, steps=1000)
-        self.reset_ranges()
+            vc.cycle_notes(loop_time=0.01, steps=1000)
+            self.reset_ranges()
 
         logger.info("Cycle through C with stop changes")
         last_stops = [*stop_set_soft, *stop_set_2]
@@ -263,8 +268,8 @@ class SongManager:
             vm.load_scene(scene_0, allow_same=True)
             vc.cycle_notes(loop_time=0.005, steps=1000)
             self.reset_ranges()
-            self._send_stop_events_by_int(1, last_stops, NoteAction.RELEASE)
-            self._send_stop_events_by_int(1, stops, NoteAction.PRESS)
+            self._send_stop_events_by_int(2, last_stops, NoteAction.RELEASE)
+            self._send_stop_events_by_int(2, stops, NoteAction.PRESS, sleep_first=False)
             last_stops = stops
             vc.cycle_notes(loop_time=0.005, steps=1000)
             time.sleep(1)
@@ -273,17 +278,17 @@ class SongManager:
         loop_time_fast = 0.0005
 
         logger.info("Quick through C load presets")
-        vc.cycle_notes(loop_time=loop_time_fast, steps=1000)
+        vc.cycle_notes(loop_time=loop_time_fast*8, steps=1000)
         self._send_stop_events_by_int(1, last_stops, NoteAction.RELEASE)
-        self._send_stop_events_by_int(1, stop_set_3, NoteAction.PRESS)
+        self._send_stop_events_by_int(4, stop_set_3, NoteAction.PRESS, sleep_first=False)
         #time.sleep(0.2)
         self.reset_ranges()
-        vc.cycle_notes(loop_time=loop_time_fast, steps=1000)
-        self._send_stop_events_by_int(2, stop_set_2, NoteAction.PRESS)
+        vc.cycle_notes(loop_time=loop_time_fast*4, steps=1000)
+        self._send_stop_events_by_int(4, stop_set_2, NoteAction.PRESS, sleep_first=False)
         #time.sleep(0.2)
         self.reset_ranges()
-        vc.cycle_notes(loop_time=loop_time_fast, steps=1000)
-        self._send_stop_events_by_int(2, stop_set_soft, NoteAction.PRESS)
+        vc.cycle_notes(loop_time=loop_time_fast*2, steps=1000)
+        self._send_stop_events_by_int(4, stop_set_soft, NoteAction.PRESS, sleep_first=False)
         #time.sleep(0.2)
         self.reset_ranges()
         vc.cycle_notes(loop_time=loop_time_fast, steps=1000)
@@ -309,12 +314,36 @@ class SongManager:
         time.sleep(1)
         self.reset_ranges()
 
-        # Pass að þær séu að nýrri nótu
         logger.info(f"Loading {EXTRA_VOICE_COUNT} more voices")
+        #for k in range(EXTRA_VOICE_COUNT):
+        #    v = self.add_voice()
+        #    logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
+        #    time.sleep(1)
+
+        queue = vm.queue
+        all_notes = {}
+        for r in organ:
+            all_notes[r] = get_note_subset(r.note_names, ["C", "E", "G"])
+            for n in r:
+                if n.state.active:
+                    logger.info(f"{n.name.pretty} already playing on {r.name}")
+                    all_notes[r].remove(n.name)
+            #for num, note in enumerate(reversed(all_notes)):
         for k in range(EXTRA_VOICE_COUNT):
-            v = self.add_voice()
-            logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
+            r = random.choice(list(organ))
+            note = random.choice(all_notes[r])
+            all_notes[r].remove(note)
+            v = vm.create_voice(f"{r.name}-middle-{k}", r, RatioVoice) 
+            v.active_note = note
+            v.assign_random_range(keep_current=True, reset=True)
+            v.on()
+            #new_voices.append(v)
+            v.queue_midi(queue)
+            logger.info(f"Creating new voice: {v}")
             time.sleep(1)
+
+        for v in vm:
+            logger.info(f"{v.active_note.pretty} on {v.name}")
 
         time.sleep(2)
 
@@ -325,13 +354,13 @@ class SongManager:
             vc.cycle_notes(loop_time=0.01, steps=1000)
             v = self.add_voice()
             logger.info(f"New voice: {v.active_note.pretty} on {v.register.name}")
-            time.sleep(2)
+            time.sleep(1)
             self.reset_ranges()
 
         if LOAD_FINALE_STOPS:
             logger.info("Loading finale stops")
             self._send_stop_events(0.5, [s for s in list(self._stops.values()) if s not in finale_stops], NoteAction.RELEASE)
-            self._send_stop_events_by_int(2, finale_stops, NoteAction.PRESS)
+            self._send_stop_events_by_int(2, finale_stops, NoteAction.PRESS, sleep_first=False)
 
         logger.info("Fast Cycles")
         for k in range(2):
@@ -402,7 +431,7 @@ class SongManager:
                 time.sleep(0.25)
 
         logger.info("FIN.")
-        time.sleep(6)
+        time.sleep(10)
 
         vm.all_off()
         vm.queue_all_midi()
